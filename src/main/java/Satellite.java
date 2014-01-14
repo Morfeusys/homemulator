@@ -1,3 +1,4 @@
+import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
@@ -8,23 +9,26 @@ import java.util.Random;
  */
 public class Satellite {
 
-    private final ZMQ.Context context = ZMQ.context(1);
+    private final ZContext context = new ZContext(1);
 
-    private final ZMQ.Socket control;
-    private final ZMQ.Socket stream;
+    private ZMQ.Socket control;
+    private ZMQ.Socket stream;
 
     public Satellite() {
-        control = context.socket(ZMQ.REQ);
-        control.setReceiveTimeOut(10000);
-        stream = context.socket(ZMQ.PUB);
+        stream = context.createSocket(ZMQ.PUB);
+        stream.connect("tcp://localhost:5556");
+        createControlSocket();
+    }
+
+    private void createControlSocket() {
+        control = context.createSocket(ZMQ.REQ);
+        control.setReceiveTimeOut(5000);
+        control.connect("tcp://localhost:5555");
     }
 
     public void start() {
         int id = new Random(System.currentTimeMillis()).nextInt(1000);
         String channel = String.valueOf(id);
-
-        control.connect("tcp://localhost:5555");
-        stream.connect("tcp://localhost:5556");
 
         control.send(channel);
         System.out.println("Satellite started " + channel);
@@ -37,6 +41,8 @@ public class Satellite {
 
         if(result == null) {
             System.out.println("TIMEOUT");
+            context.destroySocket(control);
+            createControlSocket();
         } else {
             System.out.println(result);
         }
