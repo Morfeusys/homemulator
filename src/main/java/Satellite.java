@@ -22,13 +22,25 @@ public class Satellite {
 
     private void createControlSocket() {
         control = context.createSocket(ZMQ.REQ);
-        control.setReceiveTimeOut(5000);
         control.connect("tcp://localhost:5555");
     }
 
     public void start() {
         int id = new Random(System.currentTimeMillis()).nextInt(1000);
         String channel = String.valueOf(id);
+
+        control.setReceiveTimeOut(100);
+        control.send("");
+        String resp = control.recvStr();
+
+        if(resp == null) {
+            System.out.println("CAN'T CONNECT");
+            context.destroySocket(control);
+            createControlSocket();
+            return;
+        }
+
+        control.setReceiveTimeOut(5000);
 
         control.send(channel);
         System.out.println("Satellite started " + channel);
