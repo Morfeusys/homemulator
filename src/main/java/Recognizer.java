@@ -16,6 +16,7 @@ public class Recognizer {
     public Recognizer() {
         control = context.socket(ZMQ.REP);
         stream = context.socket(ZMQ.SUB);
+        stream.setReceiveTimeOut(100);
         openhab = context.socket(ZMQ.PUSH);
     }
 
@@ -28,9 +29,14 @@ public class Recognizer {
 
         while (!Thread.currentThread().isInterrupted()) {
             String channel = control.recvStr();
+            if("".equals(channel)) {
+                control.send("");
+                continue;
+            }
+            openhab.send("TestRGB 0.0,0.0,0.0");
             String response = processStream(channel);
             control.send(response);
-            openhab.send("Lights ON");
+            openhab.send("TestRGB " + ("SUCCESS".equals(response) ? "120.0,100.0,100.0" : "360.0,100.0,100.0"));
         }
     }
 
@@ -48,7 +54,7 @@ public class Recognizer {
         }
 
         stream.unsubscribe(channel.getBytes());
-        String result = new Random(System.currentTimeMillis()).nextInt(5) == 0 ? "ERROR" : "SUCCESS";
+        String result = new Random(System.currentTimeMillis()).nextInt(2) == 0 ? "ERROR" : "SUCCESS";
         System.out.println();
         System.out.println(result);
         return result;
